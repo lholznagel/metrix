@@ -1,11 +1,13 @@
 pub mod collector;
 pub mod data;
-
-use std::time::Instant;
-use tokio::sync::mpsc::Sender;
+pub mod exporters;
 
 pub use self::collector::*;
 pub use self::data::*;
+pub use self::exporters::*;
+
+use std::time::Instant;
+use tokio::sync::mpsc::Sender;
 
 #[derive(Debug)]
 pub enum MetricCommand {
