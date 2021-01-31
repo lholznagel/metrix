@@ -1,0 +1,11 @@
+[package]
+name = "metrix_db"
+version = "0.1.0"
+authors = ["lholznagel <contact@lholznagel.info>"]
+edition = "2018"
+
+[dependencies]
+async-trait = "0.1.42"
+cachem_utils = { git = "https://github.com/lholznagel/cachem.git", rev = "c97507c5aac42d29656df758652a9afc22a2fccc", features = ["derive", "with-uuid"] }
+tokio = { version = "1.1.1", features = ["full"] }
+uuid = { version = "0.8.2", features = ["v4"] }
