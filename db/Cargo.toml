@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1.42"
-cachem_utils = { git = "https://github.com/lholznagel/cachem.git", rev = "c97507c5aac42d29656df758652a9afc22a2fccc", features = ["derive", "with-uuid"] }
-tokio = { version = "1.1.1", features = ["full"] }
+cachem = { path = "../../cachem/cachem", features = ["derive", "uuid"] }
+morgan = { git = "https://github.com/lholznagel/morgan.git", rev = "624526038c210b142d2835fa77965064771ac192" }
+tokio = { version = "1.2.0", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"] }

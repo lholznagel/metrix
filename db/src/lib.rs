@@ -1,34 +1,13 @@
-mod metric;
+mod metric_history;
+mod metric_info;
 
-pub use self::metric::*;
+pub use self::metric_history::*;
+pub use self::metric_info::*;
 
-use cachem_utils::Parse;
-
-#[macro_export]
-macro_rules! parser_request {
-    ($action:expr, $cache:expr, $struct:ident) => {
-        #[async_trait::async_trait]
-        impl cachem_utils::ProtocolRequest for $struct {
-            fn action(&self) -> u8 {
-                $action.into()
-            }
-
-            fn cache_type(&self) -> u8 {
-                $cache.into()
-            }
-        }
-    };
-}
+use cachem::Parse;
 
 #[derive(Debug, Default, Parse)]
 pub struct EmptyResponse;
-
-#[async_trait::async_trait]
-pub trait Resolve<T: Parse> {
-    type Error;
-    type Response;
-    async fn resolve(&self, input: T) -> Result<Self::Response, Self::Error>;
-}
 
 #[derive(Debug)]
 pub enum Actions {
@@ -63,13 +42,15 @@ impl From<u8> for Actions {
 
 #[derive(Debug)]
 pub enum Caches {
+    MetricHistory,
     MetricInfo,
 }
 
 impl Into<u8> for Caches {
     fn into(self) -> u8 {
         match self {
-            Self::MetricInfo =>  0u8,
+            Self::MetricHistory => 0u8,
+            Self::MetricInfo    => 1u8,
         }
     }
 }
@@ -77,7 +58,8 @@ impl Into<u8> for Caches {
 impl From<u8> for Caches {
     fn from(x: u8) -> Self {
         match x {
-            0 => Self::MetricInfo,
+            0 => Self::MetricHistory,
+            1 => Self::MetricInfo,
             _ => panic!("Unrecognized cache type {}", x),
         }
     }

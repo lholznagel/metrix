@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 use tokio::{net::TcpListener, sync::{Mutex, mpsc::Receiver}};
-use tokio::prelude::*;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{MetricCommand, MetricData};
 
@@ -77,7 +77,7 @@ impl MetricCollector {
 
     /// Starts a tcp listener and returns the prometheus exposition format when a message is send
     pub async fn metric_server(&self, addr: &'static str) {
-        let mut listener = TcpListener::bind(addr).await.unwrap();
+        let listener = TcpListener::bind(addr).await.unwrap();
 
         loop {
             let (mut socket, _) = listener.accept().await.unwrap();
