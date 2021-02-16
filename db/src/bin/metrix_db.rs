@@ -15,9 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let metric_info_copy = metric_info_cache.clone();
         let metric_history_copy= metric_history_cache.clone();
 
-        (Actions::Fetch, Caches::MetricInfo)     => (metric_info_copy, lookup, LookupMetricUuid),
+        - Actions::Lookup      => (metric_info_copy, lookup, LookupMetricUuidReq),
 
-        (Actions::Fetch, Caches::MetricHistory)  => (metric_history_copy, fetch, FetchMetricsReq),
-        (Actions::Insert, Caches::MetricHistory) => (metric_history_copy, insert, InsertMetricsReq),
+        - Actions::FetchAll    => (metric_history_copy, fetch, FetchMetricsReq),
+        - Actions::FetchLatest => (metric_history_copy, fetch, FetchMetricsLatestReq),
+        - Actions::Insert      => (metric_history_copy, insert, InsertMetricsReq),
     };
 }

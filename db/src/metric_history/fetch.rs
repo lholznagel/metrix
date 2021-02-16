@@ -1,9 +1,9 @@
 use super::{MetricHistoryCache, MetricHistoryEntry};
 
-use crate::{Actions, Caches, EmptyResponse};
+use crate::Actions;
 
 use async_trait::*;
-use cachem::{Fetch, Parse, request};
+use cachem::{EmptyResponse, Fetch, Parse, request};
 use uuid::Uuid;
 
 #[async_trait]
@@ -12,6 +12,7 @@ impl Fetch<FetchMetricsReq> for MetricHistoryCache {
     type Response = FetchMetricsRes;
 
     async fn fetch(&self, input: FetchMetricsReq) -> Result<Self::Response, Self::Error> {
+        dbg!("hjistry");
         let filter = input.0;
         let entries = self.0
             .read()
@@ -31,7 +32,7 @@ impl Fetch<FetchMetricsReq> for MetricHistoryCache {
     }
 }
 
-#[request(Actions::Fetch, Caches::MetricHistory)]
+#[request(Actions::FetchAll)]
 #[derive(Debug, Parse)]
 pub struct FetchMetricsReq(pub FetchMetricFilter);
 
@@ -44,7 +45,7 @@ pub struct FetchMetricFilter {
     pub id: Uuid,
     /// Start timestamp, max 30 days in the past
     /// Everything that exceedes 30 days is not guaranteed to be in the database
-    pub ts_start: u128,
+    pub ts_start: u64,
 }
 
 #[cfg(test)]
@@ -60,10 +61,10 @@ mod metric_history_fetch_tests {
         let uuid_0 = Uuid::new_v4();
         let mut entries = HashMap::new();
         entries.insert(uuid_0, vec![
-            MetricHistoryEntry { timestamp: 0u128, value: 0u128 },
-            MetricHistoryEntry { timestamp: 1u128, value: 2u128 },
-            MetricHistoryEntry { timestamp: 3u128, value: 4u128 },
-            MetricHistoryEntry { timestamp: 5u128, value: 6u128 },
+            MetricHistoryEntry { timestamp: 0u64, value: 0u128 },
+            MetricHistoryEntry { timestamp: 1u64, value: 2u128 },
+            MetricHistoryEntry { timestamp: 3u64, value: 4u128 },
+            MetricHistoryEntry { timestamp: 5u64, value: 6u128 },
         ]);
         let cache = MetricHistoryCache(RwLock::new(entries));
 
@@ -87,10 +88,10 @@ mod metric_history_fetch_tests {
         let uuid_0 = Uuid::new_v4();
         let mut entries = HashMap::new();
         entries.insert(uuid_0, vec![
-            MetricHistoryEntry { timestamp: 0u128, value: 0u128 },
-            MetricHistoryEntry { timestamp: 1u128, value: 2u128 },
-            MetricHistoryEntry { timestamp: 3u128, value: 4u128 },
-            MetricHistoryEntry { timestamp: 5u128, value: 6u128 },
+            MetricHistoryEntry { timestamp: 0u64, value: 0u128 },
+            MetricHistoryEntry { timestamp: 1u64, value: 2u128 },
+            MetricHistoryEntry { timestamp: 3u64, value: 4u128 },
+            MetricHistoryEntry { timestamp: 5u64, value: 6u128 },
         ]);
         let cache = MetricHistoryCache(RwLock::new(entries));
 
@@ -116,7 +117,7 @@ mod metric_history_fetch_tests {
 
         let filter = FetchMetricFilter {
             id: uuid_0,
-            ts_start: 0u128,
+            ts_start: 0u64,
         };
         let input = FetchMetricsReq(filter);
 

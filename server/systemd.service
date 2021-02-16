@@ -1,0 +1,14 @@
+[Unit]
+Description=Metrix server
+After=metrix_db.service
+
+[Service]
+Type=simple
+Environment=MORGAN_COLOR=false
+Environment=RUST_BACKTRACE=1
+ExecStartPre=/bin/sleep 5
+ExecStart=/opt/metrix/metrix_server
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

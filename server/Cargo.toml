@@ -1,0 +1,17 @@
+[package]
+name = "metrix_server"
+version = "0.1.0"
+authors = ["lholznagel <contact@lholznagel.info>"]
+edition = "2018"
+
+[dependencies]
+cachem = { path = "../../cachem/cachem" }
+log = "0.4.14"
+metrix_db = { path = "../db", features = ["with_serde"] }
+metrix_exporter = { path = "../exporter" }
+morgan = { git = "https://github.com/lholznagel/morgan.git", rev = "624526038c210b142d2835fa77965064771ac192" }
+serde = { version = "1.0.123", features = ["derive"] }
+serde_json = "1.0.62"
+tokio = { version = "1.2.0", features = ["full"] }
+uuid = { version = "0.8.2", features = ["v4", "serde"] }
+warp = "0.3.0"

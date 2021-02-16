@@ -1,9 +1,9 @@
 use super::{MetricHistoryCache, MetricHistoryEntry};
 
-use crate::{Actions, Caches, EmptyResponse};
+use crate::Actions;
 
 use async_trait::*;
-use cachem::{Fetch, Parse, request};
+use cachem::{EmptyResponse, Fetch, Parse, request};
 use uuid::Uuid;
 
 #[async_trait]
@@ -12,11 +12,14 @@ impl Fetch<FetchMetricsLatestReq> for MetricHistoryCache {
     type Response = FetchMetricsLatestRes;
 
     async fn fetch(&self, input: FetchMetricsLatestReq) -> Result<Self::Response, Self::Error> {
+        dbg!("Called latest");
         let filter = input.0;
         let entries = self.0
             .read()
             .await;
+        dbg!(&entries);
         if let Some(x) = entries.get(&filter.id) {
+            dbg!(&x);
             // If the item exist, there is at least one element in the vec
             return Ok(FetchMetricsLatestRes(x.clone().pop().unwrap()))
         }
@@ -25,7 +28,7 @@ impl Fetch<FetchMetricsLatestReq> for MetricHistoryCache {
     }
 }
 
-#[request(Actions::Fetch, Caches::MetricHistory)]
+#[request(Actions::FetchLatest)]
 #[derive(Debug, Parse)]
 pub struct FetchMetricsLatestReq(pub FetchMetricLatestFilter);
 
@@ -51,10 +54,10 @@ mod metric_history_fetch_tests {
         let uuid_0 = Uuid::new_v4();
         let mut entries = HashMap::new();
         entries.insert(uuid_0, vec![
-            MetricHistoryEntry { timestamp: 0u128, value: 0u128 },
-            MetricHistoryEntry { timestamp: 1u128, value: 2u128 },
-            MetricHistoryEntry { timestamp: 3u128, value: 4u128 },
-            MetricHistoryEntry { timestamp: 5u128, value: 6u128 },
+            MetricHistoryEntry { timestamp: 0u64, value: 0u128 },
+            MetricHistoryEntry { timestamp: 1u64, value: 2u128 },
+            MetricHistoryEntry { timestamp: 3u64, value: 4u128 },
+            MetricHistoryEntry { timestamp: 5u64, value: 6u128 },
         ]);
         let cache = MetricHistoryCache(RwLock::new(entries));
 
@@ -67,7 +70,7 @@ mod metric_history_fetch_tests {
         assert!(res.is_ok());
 
         let res = res.unwrap();
-        assert_eq!(res.0.timestamp, 5u128);
+        assert_eq!(res.0.timestamp, 5u64);
         assert_eq!(res.0.value, 6u128);
     }
 

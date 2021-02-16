@@ -1,0 +1,13 @@
+[Unit]
+Description=Metrix database
+
+[Service]
+Type=simple
+Environment=MORGAN_COLOR=false
+Environment=RUST_BACKTRACE=1
+ExecStart=/opt/metrix/metrix_db
+WorkingDirectory=/var/metrix
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

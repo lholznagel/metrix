@@ -16,13 +16,17 @@ impl Storage for MetricHistoryCache {
     async fn load<B>(buf: &mut B) -> Result<Self, CachemError>
         where B: AsyncBufRead + AsyncRead + Send + Unpin {
 
-        let entries = SaveMetrics::read(buf).await?;
-        let mut map = HashMap::with_capacity(entries.0.len());
-        for entry in entries.0 {
-            map.insert(entry.id, entry.entries);
-        }
+        if let Ok(entries) = SaveMetrics::read(buf).await {
+            let mut map = HashMap::with_capacity(entries.0.len());
 
-        Ok(MetricHistoryCache(RwLock::new(map)))
+            for entry in entries.0 {
+                map.insert(entry.id, entry.entries);
+            }
+
+            Ok(Self(RwLock::new(map)))
+        } else {
+            Ok(Self::default())
+        }
     }
 
     async fn save<B>(&self, buf: &mut B) -> Result<(), CachemError>
