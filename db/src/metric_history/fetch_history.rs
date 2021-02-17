@@ -7,12 +7,11 @@ use cachem::{EmptyResponse, Fetch, Parse, request};
 use uuid::Uuid;
 
 #[async_trait]
-impl Fetch<FetchMetricsReq> for MetricHistoryCache {
+impl Fetch<FetchMetricsHistoryReq> for MetricHistoryCache {
     type Error    = EmptyResponse;
-    type Response = FetchMetricsRes;
+    type Response = FetchMetricsHistoryRes;
 
-    async fn fetch(&self, input: FetchMetricsReq) -> Result<Self::Response, Self::Error> {
-        dbg!("hjistry");
+    async fn fetch(&self, input: FetchMetricsHistoryReq) -> Result<Self::Response, Self::Error> {
         let filter = input.0;
         let entries = self.0
             .read()
@@ -25,19 +24,19 @@ impl Fetch<FetchMetricsReq> for MetricHistoryCache {
 
                 res.push(*x);
             }
-            return Ok(FetchMetricsRes(res));
+            return Ok(FetchMetricsHistoryRes(res));
         }
 
         Err(EmptyResponse::default())
     }
 }
 
-#[request(Actions::FetchAll)]
+#[request(Actions::FetchHistory)]
 #[derive(Debug, Parse)]
-pub struct FetchMetricsReq(pub FetchMetricFilter);
+pub struct FetchMetricsHistoryReq(pub FetchMetricFilter);
 
 #[derive(Debug, Parse)]
-pub struct FetchMetricsRes(pub Vec<MetricHistoryEntry>);
+pub struct FetchMetricsHistoryRes(pub Vec<MetricHistoryEntry>);
 
 #[derive(Clone, Copy, Debug, Parse)]
 pub struct FetchMetricFilter {
@@ -72,7 +71,7 @@ mod metric_history_fetch_tests {
             id: uuid_0,
             ts_start: 0
         };
-        let input = FetchMetricsReq(filter);
+        let input = FetchMetricsHistoryReq(filter);
 
         let res = cache.fetch(input).await;
         assert!(res.is_ok());
@@ -99,7 +98,7 @@ mod metric_history_fetch_tests {
             id: uuid_0,
             ts_start: 3
         };
-        let input = FetchMetricsReq(filter);
+        let input = FetchMetricsHistoryReq(filter);
 
         let res = cache.fetch(input).await;
         assert!(res.is_ok());
@@ -119,7 +118,7 @@ mod metric_history_fetch_tests {
             id: uuid_0,
             ts_start: 0u64,
         };
-        let input = FetchMetricsReq(filter);
+        let input = FetchMetricsHistoryReq(filter);
 
         let res = cache.fetch(input).await;
         assert!(res.is_err());

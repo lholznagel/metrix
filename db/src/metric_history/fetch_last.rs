@@ -7,39 +7,29 @@ use cachem::{EmptyResponse, Fetch, Parse, request};
 use uuid::Uuid;
 
 #[async_trait]
-impl Fetch<FetchMetricsLatestReq> for MetricHistoryCache {
+impl Fetch<FetchMetricsLastReq> for MetricHistoryCache {
     type Error    = EmptyResponse;
-    type Response = FetchMetricsLatestRes;
+    type Response = FetchMetricsLastRes;
 
-    async fn fetch(&self, input: FetchMetricsLatestReq) -> Result<Self::Response, Self::Error> {
-        dbg!("Called latest");
-        let filter = input.0;
+    async fn fetch(&self, input: FetchMetricsLastReq) -> Result<Self::Response, Self::Error> {
         let entries = self.0
             .read()
             .await;
-        dbg!(&entries);
-        if let Some(x) = entries.get(&filter.id) {
-            dbg!(&x);
+        if let Some(x) = entries.get(&input.0) {
             // If the item exist, there is at least one element in the vec
-            return Ok(FetchMetricsLatestRes(x.clone().pop().unwrap()))
+            return Ok(FetchMetricsLastRes(x.clone().pop().unwrap()))
         }
 
         Err(EmptyResponse::default())
     }
 }
 
-#[request(Actions::FetchLatest)]
+#[request(Actions::FetchLast)]
 #[derive(Debug, Parse)]
-pub struct FetchMetricsLatestReq(pub FetchMetricLatestFilter);
+pub struct FetchMetricsLastReq(pub Uuid);
 
 #[derive(Debug, Parse)]
-pub struct FetchMetricsLatestRes(pub MetricHistoryEntry);
-
-#[derive(Clone, Copy, Debug, Parse)]
-pub struct FetchMetricLatestFilter {
-    /// Id of the requested metric
-    pub id: Uuid,
-}
+pub struct FetchMetricsLastRes(pub MetricHistoryEntry);
 
 #[cfg(test)]
 mod metric_history_fetch_tests {
@@ -61,10 +51,7 @@ mod metric_history_fetch_tests {
         ]);
         let cache = MetricHistoryCache(RwLock::new(entries));
 
-        let filter = FetchMetricLatestFilter {
-            id: uuid_0,
-        };
-        let input = FetchMetricsLatestReq(filter);
+        let input = FetchMetricsLastReq(uuid_0);
 
         let res = cache.fetch(input).await;
         assert!(res.is_ok());
@@ -80,10 +67,7 @@ mod metric_history_fetch_tests {
         let uuid_0 = Uuid::new_v4();
         let cache = MetricHistoryCache(RwLock::new(HashMap::new()));
 
-        let filter = FetchMetricLatestFilter {
-            id: uuid_0,
-        };
-        let input = FetchMetricsLatestReq(filter);
+        let input = FetchMetricsLastReq(uuid_0);
 
         let res = cache.fetch(input).await;
         assert!(res.is_err());

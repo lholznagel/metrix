@@ -1,23 +1,13 @@
 use cachem::{ConnectionPool, Protocol};
-use metrix_db::{FetchMetricLatestFilter, FetchMetricsLatestReq, FetchMetricsLatestRes};
-use metrix_exporter::Metrix;
+use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes};
 use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    morgan::Morgan::init(vec![]);
-
-    let mut metrix = Metrix::new("0.0.0.0:8888").await.unwrap();
-    metrix.register(vec!["my::cool::metric"]).await.unwrap();
-    let sender = metrix.get_sender();
-    tokio::task::spawn(async move {
-        metrix.listen().await
-    });
-    // sender.send("my::cool::metric", 1u128).await;
+    morgan::Morgan::init(vec!["tracing".into()]);
 
     let pool = ConnectionPool::new("0.0.0.0:8888".into(), 10).await?;
-
     ApiServer::new(pool).serve().await;
 
     Ok(())
@@ -39,28 +29,80 @@ impl ApiServer {
         let _self = self.clone();
 
         let root = warp::any()
-            .map(move || _self.clone())
-            .and(warp::path!("api" / "v1" / Uuid))
-            .and(warp::get())
-            .and_then(Self::fetch_by_id);
+            .map(move || _self.clone());
 
-        warp::serve(root)
+        let infos = root
+            .clone()
+            .and(warp::path!("infos" / ..));
+        let all_infos = infos
+            .clone()
+            .and(warp::path::end())
+            .and(warp::get())
+            .and_then(Self::fetch_all_metric_infos);
+        let infos = all_infos;
+
+        let history = root
+            .clone()
+            .and(warp::path!("history" / ..));
+        let last = history
+            .clone()
+            .and(warp::path!(Uuid))
+            .and(warp::get())
+            .and_then(Self::fetch_last);
+        let last_bulk = history
+            .clone()
+            .and(warp::path!("bulk"))
+            .and(warp::post())
+            .and(warp::body::json())
+            .and_then(Self::fetch_last_bulk);
+        let history = last
+            .or(last_bulk);
+
+        let api = infos
+            .or(history);
+
+        warp::serve(api)
             .run(([0, 0, 0, 0], 8889))
             .await;
     }
 
-    async fn fetch_by_id(
+    async fn fetch_all_metric_infos(
+        self: Self,
+    ) -> Result<impl Reply, Rejection> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let data = Protocol::request::<_, FetchAllMetricInfosRes>(
+            &mut conn,
+            FetchAllMetricInfosReq::default()
+        )
+        .await
+        .unwrap();
+
+        Ok(warp::reply::json(&data.0))
+    }
+
+    async fn fetch_last(
         self: Self,
         id: Uuid,
     ) -> Result<impl Reply, Rejection> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let data = Protocol::request::<_, FetchMetricsLatestRes>(
+        let data = Protocol::request::<_, FetchMetricsLastRes>(
             &mut conn,
-            FetchMetricsLatestReq(
-                FetchMetricLatestFilter {
-                    id
-                }
-            )
+            FetchMetricsLastReq(id)
+        )
+        .await
+        .unwrap();
+
+        Ok(warp::reply::json(&data.0))
+    }
+
+    async fn fetch_last_bulk(
+        self: Self,
+        ids: Vec<Uuid>,
+    ) -> Result<impl Reply, Rejection> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let data = Protocol::request::<_, FetchMetricsLastBulkRes>(
+            &mut conn,
+            FetchMetricsLastBulkReq(ids)
         )
         .await
         .unwrap();

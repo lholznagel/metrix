@@ -1,58 +1,30 @@
 # Metrix
 
-`Metrix` is a simple implementation for metrics that exports its metrics as the prometheus exposition format.
+## Usage Metrix exporter
 
-Not all prometheus types are implemented and the current `Metric` struct does not implement all `MetricCommand` commands.
+``` toml
+# Cargo.toml
 
-## Usage
-
-Run:
-```
-git submodule add git@github.com:lholznagel/metrix.git
+metrix_exporter = { git = "https://github.com/lholznagel/metrix.git", rev = "LATEST_REF" }
 ```
 
-Cargo.toml:
-```
-metrix = { path = "../metrix" }
-tokio = { version = "0.2.24", features = ["full"] }
-```
-
-Code:
 ``` rust
-use metrix::{MetricCollector, MetricCommand, Metrics};
-use tokio::sync::mpsc;
+// Create a new metrix instance
+let mut metrix = Metrix::new("0.0.0.0:8888").await.unwrap();
+// Register all metrics that are used in the application
+metrix.register(vec!["my::cool::metric"]).await.unwrap();
 
-#[tokio::main]
-async fn main() {
-    let (metric_tx, metric_rx) = mpsc::channel::<(&str, MetricCommand)>(64);
-    let metric_collector = MetricCollector::default();
+// Get a metric sender
+let sender = metrix.get_sender();
 
-    let metric_tx_copy = metric_tx.clone();
-    let my_task = tokio::task::spawn(async {
-        let mut metrics = Metrics::new(metric_tx_copy);
+// Start the metric receiver as a task
+tokio::task::spawn(async move {
+    metrix.listen().await
+});
 
-        let start = std::time::Instant::now();
-        // automatically takes the elapsed time
-        metrics.duration("my_metric_name", start).await;
-
-        metrics.set("another_metric", 5u64).await;
-
-        metrics.current_timestamp("current_timestamp").await;
-    });
-
-    tokio::join!(
-        my_task,
-        metric_collector.metric_server("127.0.0.1:9100"),
-        metric_collector.metric_listener(metric_rx),
-    );
-}
+// Send values
+sender.send("my::cool::metric", 1u128).await;
 ```
-
-## Defaults
-
-- Setting a duration boils down to a prometheus summary type
-  - Quantiles: 0.95, 0.99 and 1
-  - To add more quantiles go to [collector.rs](./src/collector.rs#158)
 
 #### License
 

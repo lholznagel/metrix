@@ -10,11 +10,11 @@ use uuid::Uuid;
 ///
 /// If the name is not in the cache it will be added and the uuid will be returned
 #[async_trait]
-impl Lookup<LookupMetricUuidReq> for MetricInfoCache {
+impl Lookup<LookupMetricIdsReq> for MetricInfoCache {
     type Error    = EmptyResponse;
-    type Response = LookupMetricUuidRes;
+    type Response = LookupMetricIdsRes;
 
-    async fn lookup(&self, input: LookupMetricUuidReq) -> Result<Self::Response, Self::Error> {
+    async fn lookup(&self, input: LookupMetricIdsReq) -> Result<Self::Response, Self::Error> {
         let mut ids = Vec::with_capacity(input.0.len());
 
         for key in input.0 {
@@ -47,18 +47,18 @@ impl Lookup<LookupMetricUuidReq> for MetricInfoCache {
         }
 
         self.save_to_file().await.unwrap();
-        Ok(LookupMetricUuidRes(ids))
+        Ok(LookupMetricIdsRes(ids))
     }
 }
 
-#[request(Actions::Lookup)]
+#[request(Actions::LookupMetricId)]
 #[derive(Debug, Parse)]
-pub struct LookupMetricUuidReq(pub Vec<String>);
+pub struct LookupMetricIdsReq(pub Vec<String>);
 
 // TODO: support derive with tuples
 // TODO: support derive Vec<&'static str>
 #[derive(Debug, Parse)]
-pub struct LookupMetricUuidRes(pub Vec<LookupMetricEntry>);
+pub struct LookupMetricIdsRes(pub Vec<LookupMetricEntry>);
 
 #[derive(Debug, Parse)]
 pub struct LookupMetricEntry {

@@ -36,7 +36,8 @@ impl Insert<InsertMetricsReq> for MetricHistoryCache {
         Ok(EmptyResponse::default())
     }
 }
-#[request(Actions::Insert)]
+
+#[request(Actions::InsertMetric)]
 #[derive(Debug, Parse)]
 pub struct InsertMetricsReq(pub InsertMetricsEntry);
 

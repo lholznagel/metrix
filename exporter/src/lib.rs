@@ -3,7 +3,7 @@ mod error;
 use self::error::*;
 
 use cachem::{ConnectionPool, EmptyResponse, Protocol};
-use metrix_db::{InsertMetricsEntry, InsertMetricsReq, LookupMetricUuidReq, LookupMetricUuidRes};
+use metrix_db::{InsertMetricsEntry, InsertMetricsReq, LookupMetricIdsReq, LookupMetricIdsRes};
 use mpsc::{Receiver, Sender};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
@@ -32,7 +32,7 @@ impl Metrix {
             sender: tx,
             receiver: rx,
             ids: HashMap::new(),
-            metrix_pool: ConnectionPool::new(metrix_db_uri, 100).await?,
+            metrix_pool: ConnectionPool::new(metrix_db_uri, 50).await?,
         })
     }
 
@@ -45,9 +45,9 @@ impl Metrix {
     pub async fn register(&mut self, names: Vec<&'static str>) -> Result<(), MetrixError> {
         let mut conn = self.metrix_pool.acquire().await?;
 
-        Protocol::request::<_, LookupMetricUuidRes>(
+        Protocol::request::<_, LookupMetricIdsRes>(
             &mut conn,
-            LookupMetricUuidReq(names.into_iter().map(Into::into).collect::<Vec<_>>()),
+            LookupMetricIdsReq(names.into_iter().map(Into::into).collect::<Vec<_>>()),
         )
         .await
         .map(|x| x.0)?
