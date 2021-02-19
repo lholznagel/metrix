@@ -3,7 +3,7 @@ mod error;
 use self::error::*;
 
 use cachem::{ConnectionPool, EmptyResponse, Protocol};
-use metrix_db::{InsertMetricsEntry, InsertMetricsReq, LookupMetricIdsReq, LookupMetricIdsRes};
+use metrix_db::{InsertMetricsEntry, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
 use mpsc::{Receiver, Sender};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
@@ -41,53 +41,62 @@ impl Metrix {
         MetrixSender(self.sender.clone())
     }
 
-    /// Registers all metrics and resolves there name to a uuid for internal use
-    pub async fn register(&mut self, names: Vec<&'static str>) -> Result<(), MetrixError> {
-        let mut conn = self.metrix_pool.acquire().await?;
-
-        Protocol::request::<_, LookupMetricIdsRes>(
-            &mut conn,
-            LookupMetricIdsReq(names.into_iter().map(Into::into).collect::<Vec<_>>()),
-        )
-        .await
-        .map(|x| x.0)?
-        .into_iter()
-        .for_each(|x| { self.ids.insert(x.key.clone(), x.id); });
-
-        Ok(())
-    }
-
     pub async fn listen(mut self) {
         while let Some((k, v)) = self.receiver.recv().await {
-            if let Some(id) = self.ids.get(&k.to_string()) {
-                // TODO: reevaluate
-                // TODO: Handle case when no more connections are in the pool
-                // if the connection fails, we ignore the metric
-                if let Ok(mut conn) = self.metrix_pool.acquire().await {
-                    if let Err(e) = Protocol::request::<_, EmptyResponse>(
-                        &mut conn,
-                        InsertMetricsReq(
-                            InsertMetricsEntry {
-                                id: *id,
-                                value: v,
-                            }
-                        ),
-                    )
-                    .await {
-                        log::error!("Error sending metric {:?} to server. Error: {:?}", id, e);
-                    }
-                }
+            let id = if let Some(id) = self.ids.get(&k.to_string()) {
+                *id
             } else {
-                log::error!("The metric {:?} is not registered.", k);
+                self.fetch_id(k).await.unwrap()
+            };
+
+            // if the connection fails, we ignore the metric
+            if let Ok(mut conn) = self.metrix_pool.acquire().await {
+                if let Err(e) = Protocol::request::<_, EmptyResponse>(
+                    &mut conn,
+                    InsertMetricsReq(
+                        InsertMetricsEntry {
+                            id,
+                            value: v,
+                        }
+                    ),
+                )
+                .await {
+                    log::error!("Error sending metric {:?} to server. Error: {:?}", id, e);
+                }
             }
         }
     }
+
+    async fn fetch_id(&mut self, name: &'static str) -> Result<Uuid, MetrixError> {
+        let mut conn = self.metrix_pool.acquire().await?;
+        let result = Protocol::request::<_, LookupMetricIdRes>(
+            &mut conn,
+            LookupMetricIdReq(name.into()),
+        )
+        .await
+        .map(|x| x.0)?;
+        self.ids.insert(result.key, result.id);
+        Ok(result.id)
+    }
 }
 
+#[derive(Clone)]
 pub struct MetrixSender(Sender<(&'static str, u128)>);
 
 impl MetrixSender {
     pub async fn send(&self, metric: &'static str, value: u128) {
         let _ = self.0.send((metric, value)).await.unwrap();
     }
+}
+
+// metrix!(self, METRIC, VALUE);
+#[macro_export]
+macro_rules! metrix {
+    ($self:expr, $metric:expr, $value:expr) => {
+        $self.metrix
+            .as_ref()
+            .unwrap()
+            .send($metric, $value)
+            .await;
+    };
 }

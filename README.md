@@ -11,8 +11,6 @@ metrix_exporter = { git = "https://github.com/lholznagel/metrix.git", rev = "LAT
 ``` rust
 // Create a new metrix instance
 let mut metrix = Metrix::new("0.0.0.0:8888").await.unwrap();
-// Register all metrics that are used in the application
-metrix.register(vec!["my::cool::metric"]).await.unwrap();
 
 // Get a metric sender
 let sender = metrix.get_sender();

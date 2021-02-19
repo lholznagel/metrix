@@ -10,55 +10,48 @@ use uuid::Uuid;
 ///
 /// If the name is not in the cache it will be added and the uuid will be returned
 #[async_trait]
-impl Lookup<LookupMetricIdsReq> for MetricInfoCache {
+impl Lookup<LookupMetricIdReq> for MetricInfoCache {
     type Error    = EmptyResponse;
-    type Response = LookupMetricIdsRes;
+    type Response = LookupMetricIdRes;
 
-    async fn lookup(&self, input: LookupMetricIdsReq) -> Result<Self::Response, Self::Error> {
-        let mut ids = Vec::with_capacity(input.0.len());
+    async fn lookup(&self, input: LookupMetricIdReq) -> Result<Self::Response, Self::Error> {
+        // Try to get the key from the map
+        let id = self.0
+            .read()
+            .await
+            .iter()
+            .find(|(_, e)| e.key == input.0)
+            .map(|(_, e)| e.id);
 
-        for key in input.0 {
-            // Try to get the key from the map
-            let id = self.0
-                .read()
+        // If the id is in the map, return the id
+        // If the id is not in the map, generate a new uuid and insert it
+        // and return it
+        let id = if let Some(id) = id {
+            id
+        } else {
+            let entry = MetricInfoEntry::new(input.0.clone());
+            let id = entry.id;
+            self.0
+                .write()
                 .await
-                .iter()
-                .find(|(_, e)| e.key == key)
-                .map(|(_, e)| e.id);
-
-            // If the id is in the map, return the id
-            // If the id is not in the map, generate a new uuid and insert it
-            // and return it
-            let id = if let Some(id) = id {
-                id
-            } else {
-                let entry = MetricInfoEntry::new(key.clone());
-                let id = entry.id;
-                self.0
-                    .write()
-                    .await
-                    .insert(entry.id, entry);
-                id
-            };
-            ids.push(LookupMetricEntry {
-                key,
-                id,
-            });
-        }
+                .insert(entry.id, entry);
+            id
+        };
 
         self.save_to_file().await.unwrap();
-        Ok(LookupMetricIdsRes(ids))
+        Ok(LookupMetricIdRes(LookupMetricEntry {
+            key: input.0,
+            id,
+        }))
     }
 }
 
 #[request(Actions::LookupMetricId)]
 #[derive(Debug, Parse)]
-pub struct LookupMetricIdsReq(pub Vec<String>);
+pub struct LookupMetricIdReq(pub String);
 
-// TODO: support derive with tuples
-// TODO: support derive Vec<&'static str>
 #[derive(Debug, Parse)]
-pub struct LookupMetricIdsRes(pub Vec<LookupMetricEntry>);
+pub struct LookupMetricIdRes(pub LookupMetricEntry);
 
 #[derive(Debug, Parse)]
 pub struct LookupMetricEntry {

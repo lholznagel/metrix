@@ -1,4 +1,4 @@
-use super::{MetricHistoryCache, MetricHistoryEntry};
+use super::MetricHistoryCache;
 
 use crate::Actions;
 
@@ -20,7 +20,12 @@ impl Fetch<FetchMetricsLastBulkReq> for MetricHistoryCache {
         for id in input.0 {
             if let Some(x) = entries.get(&id) {
                 // If the item exist, there is at least one element in the vec
-                result.push(x.clone().pop().unwrap());
+                let entry = x.clone().pop().unwrap();
+                result.push(MetricHistoryBulkEntry {
+                    id,
+                    timestamp: entry.timestamp,
+                    value: entry.value,
+                });
             }
         }
 
@@ -33,4 +38,15 @@ impl Fetch<FetchMetricsLastBulkReq> for MetricHistoryCache {
 pub struct FetchMetricsLastBulkReq(pub Vec<Uuid>);
 
 #[derive(Debug, Parse)]
-pub struct FetchMetricsLastBulkRes(pub Vec<MetricHistoryEntry>);
+pub struct FetchMetricsLastBulkRes(pub Vec<MetricHistoryBulkEntry>);
+
+#[cfg_attr(feature = "with_serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Debug, Parse)]
+pub struct MetricHistoryBulkEntry {
+    /// Id of the metric
+    pub id: Uuid,
+    /// Timestamp in nano seconds
+    pub timestamp: u64,
+    /// Value for that specific timestamp
+    pub value: u128
+}

@@ -29,7 +29,8 @@ impl ApiServer {
         let _self = self.clone();
 
         let root = warp::any()
-            .map(move || _self.clone());
+            .map(move || _self.clone())
+            .and(warp::path!("api" / ..));
 
         let infos = root
             .clone()

@@ -45,7 +45,7 @@ pub struct InsertMetricsReq(pub InsertMetricsEntry);
 pub struct InsertMetricsEntry {
     /// Id of the entry
     pub id: Uuid,
-    /// Value that maps to the id and timestamp
+    /// Value for that id
     pub value: u128,
 }
 
