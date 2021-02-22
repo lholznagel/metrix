@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <!--v-card>
     <v-card-title>All metrix</v-card-title>
 
     <v-card-text>
@@ -39,7 +39,15 @@
         </template>
       </v-simple-table>
     </v-card-text>
-  </v-card>
+  </v-card-->
+
+  <div>
+    {{ options }}
+    <v-chart
+    class="echarts"
+    :options="options"
+  />
+  </div>
 </template>
 
 <script lang="ts">
@@ -50,23 +58,33 @@ import { Component, Vue } from 'vue-property-decorator';
 export default class AllMetrics extends Vue {
   public lastValues: IMetrixHistory[] = [];
   public metrixInfos: IMetrixInfo[] = [];
+  public options = {};
 
   public async created() {
-    this.metrixInfos = (await axios.get<IMetrixInfo[]>('/api/infos')).data
+    this.metrixInfos = (await axios.get<IMetrixInfo[]>('/api/infos')).data;
     this.load(this.metrixInfos.map(x => x.id));
+
+    this.options = {
+      xAxis: {
+        type: 'category',
+        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      },
+      yAxis: {},
+      series: [{
+        data: [150, 230, 224, 218, 135, 147, 260],
+        type: 'line'
+      }]
+    };
   }
 
   public async load(ids: string[]) {
-    /*(await axios.post<IMetrixHistory[]>(`/api/history/bulk`, ids))
+    (await axios.post<IMetrixHistory[]>(`/api/history/bulk`, ids))
       .data
-      .map(x => this.lastValues.set(x.id, x));*/
-    const v = (await axios.get<IMetrixHistory>(`/api/history/${ids[0]}`)).data;
-    v.id = ids[0];
-    this.lastValues = [v];
+      .map(x => this.lastValues.push(x));
   }
 
   public getKey(id: string): string {
-    return this.metrixInfos.find(x => x.id === id).key;
+    return (this.metrixInfos.find(x => x.id === id) || {key: ''}).key;
   }
 }
 

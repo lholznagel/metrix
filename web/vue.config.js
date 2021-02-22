@@ -6,7 +6,7 @@ module.exports = {
     port: 1338,
     proxy: {
       '/api': {
-        target: 'http://virgo:8889'
+        target: 'http://192.168.178.199:8889'
       }
     }
   }

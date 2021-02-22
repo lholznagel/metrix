@@ -8,17 +8,21 @@
   },
   "dependencies": {
     "axios": "0.21.1",
+    "echarts": "4.9.0",
     "vue": "2.6.12",
     "vue-class-component": "7.2.6",
+    "vue-echarts": "5.0.0-beta.0",
     "vue-property-decorator": "9.1.2",
     "vue-router": "3.5.1",
     "vuetify": "2.4.4"
   },
   "devDependencies": {
+    "@types/echarts": "4.9.3",
     "@vue/cli-plugin-pwa": "~4.5.0",
     "@vue/cli-plugin-router": "~4.5.0",
     "@vue/cli-plugin-typescript": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
+    "@vue/composition-api": "^1.0.0-rc.2",
     "sass": "^1.19.0",
     "sass-loader": "^8.0.0",
     "typescript": "~3.9.3",
