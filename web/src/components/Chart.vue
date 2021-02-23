@@ -1,50 +1,73 @@
 <template>
-  <v-chart
-    class="echarts"
-    :option="options"
-  />
+  <v-chart :init-options="init" :option="option" autoresize></v-chart>
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
+import axios from 'axios';
+import { Component, Prop, Vue } from 'vue-property-decorator';
 
 @Component
-export default class ECharts extends Vue {
-  public options = {
+export default class MyItems extends Vue {
+  public init = {
+    renderer: 'svg',
   };
+  public option = {};
 
-  public mounted() {
-    this.options = {
-      xAxis: {
-        type: 'category',
-        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  public async mounted() {
+    /*const market = (await axios.get(`/api/market/${this.id}/historic?buy=${this.isBuyOrder}`)).data;
+    const ts = market.map(x => x.ts);
+    const series = [{
+      name: 'Volume',
+      data: market.map(x => [ x.ts, x.volume ]),
+      type: 'bar'
+    }, {
+      name: 'Highest price',
+      data: market.map(x => [x.ts, x.highest_price]),
+      type: 'line',
+      yAxisIndex: 1
+    }, {
+      name: 'Average price',
+      data: market.map(x => [x.ts, x.average_price]),
+      type: 'line',
+      yAxisIndex: 1
+    }, {
+      name: 'Lowest price',
+      data: market.map(x => [x.ts, x.lowest_price]),
+      type: 'line',
+      yAxisIndex: 1
+    }];
+
+    this.option = {
+      legend: {
+        textStyle: {
+          color: '#fff'
+        }
       },
-      yAxis: {},
-      series: [{
-        data: [150, 230, 224, 218, 135, 147, 260],
-        type: 'line'
-      }]
-    };
+      tooltip: {
+        trigger: 'axis',
+      },
+      xAxis: {
+        type: 'time',
+        data: ts
+      },
+      yAxis: [{
+        name: 'volume',
+        type: 'value',
+        scale: true,
+      }, {
+        name: 'price',
+        type: 'value',
+        scale: true,
+      }],
+      series
+    }*/
   }
 }
 </script>
 
 <style scoped>
-figure {
-  display: inline-block;
-  position: relative;
-  margin: 2em auto;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 0 45px rgba(0, 0, 0, 0.2);
-  padding: 1.5em 2em;
-  min-width: calc(40vw + 4em);
-
-  .echarts {
-    width: 100%;
-    width: 40vw;
-    min-width: 400px;
-    height: 300px;
-  }
+.echarts {
+  width: 100%;
+  height: 400px;
 }
 </style>

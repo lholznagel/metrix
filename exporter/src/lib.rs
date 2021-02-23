@@ -16,16 +16,18 @@ pub struct Metrix {
     /// Connection pool to the metrix database
     metrix_pool: ConnectionPool,
     /// MSPC Receiver
-    receiver: Receiver<(&'static str, u128)>,
+    receiver: Receiver<(String, u128)>,
     /// MSPC Sender
-    sender: Sender<(&'static str, u128)>,
+    sender: Sender<(String, u128)>,
+    /// Most times this will be the crate name
+    root_metric: String,
 }
 
 impl Metrix {
     /// Creates a new metrix instance
     ///
     /// Takes the uri to the metrix database
-    pub async fn new(metrix_db_uri: &'static str) -> Result<Self, MetrixError> {
+    pub async fn new(root_metric: String, metrix_db_uri: &'static str) -> Result<Self, MetrixError> {
         let (tx, rx) = mpsc::channel(1_000);
 
         Ok(Self {
@@ -33,12 +35,13 @@ impl Metrix {
             receiver: rx,
             ids: HashMap::new(),
             metrix_pool: ConnectionPool::new(metrix_db_uri, 50).await?,
+            root_metric,
         })
     }
 
     /// Gets a clone of the sender
     pub fn get_sender(&self) -> MetrixSender {
-        MetrixSender(self.sender.clone())
+        MetrixSender::new(self.root_metric.clone(), self.sender.clone())
     }
 
     pub async fn listen(mut self) {
@@ -46,7 +49,7 @@ impl Metrix {
             let id = if let Some(id) = self.ids.get(&k.to_string()) {
                 *id
             } else {
-                self.fetch_id(k).await.unwrap()
+                self.fetch_id(&k).await.unwrap()
             };
 
             // if the connection fails, we ignore the metric
@@ -67,7 +70,7 @@ impl Metrix {
         }
     }
 
-    async fn fetch_id(&mut self, name: &'static str) -> Result<Uuid, MetrixError> {
+    async fn fetch_id(&mut self, name: &str) -> Result<Uuid, MetrixError> {
         let mut conn = self.metrix_pool.acquire().await?;
         let result = Protocol::request::<_, LookupMetricIdRes>(
             &mut conn,
@@ -81,11 +84,25 @@ impl Metrix {
 }
 
 #[derive(Clone)]
-pub struct MetrixSender(Sender<(&'static str, u128)>);
+pub struct MetrixSender {
+    root: String,
+    sender: Sender<(String, u128)>,
+}
 
 impl MetrixSender {
+    fn new(root: String, sender: Sender<(String, u128)>) -> Self {
+        Self {
+            root,
+            sender
+        }
+    }
+
     pub async fn send(&self, metric: &'static str, value: u128) {
-        let _ = self.0.send((metric, value)).await.unwrap();
+        let mut m = self.root.clone();
+        m.push_str("::");
+        m.push_str(metric);
+
+        let _ = self.sender.send((m, value)).await;
     }
 }
 

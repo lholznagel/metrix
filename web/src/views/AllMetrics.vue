@@ -1,5 +1,5 @@
 <template>
-  <!--v-card>
+  <v-card>
     <v-card-title>All metrix</v-card-title>
 
     <v-card-text>
@@ -39,15 +39,7 @@
         </template>
       </v-simple-table>
     </v-card-text>
-  </v-card-->
-
-  <div>
-    {{ options }}
-    <v-chart
-    class="echarts"
-    :options="options"
-  />
-  </div>
+  </v-card>
 </template>
 
 <script lang="ts">
