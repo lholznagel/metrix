@@ -16,7 +16,7 @@ deploy-server: musl
 deploy-db: musl
 	sudo rsync target/x86_64-unknown-linux-musl/release/metrix_db /opt/metrix/metrix_db
 	sudo mkdir -p /var/metrix/db/storage
-	#sudo systemctl restart metrix_db
+	sudo systemctl restart metrix_db
 
 sync-virgo:
 	rsync --recursive --update --inplace --delete --quiet --exclude={'.git','target','web/node_modules'} . virgo:dev/metrix

@@ -1,5 +1,6 @@
-use cachem::{ConnectionPool, Protocol};
-use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes};
+use cachem::{ConnectionPool, EmptyResponse, Protocol};
+use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes, InsertMetricsEntry, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
+use metrix_exporter::Metrix;
 use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
 
@@ -7,7 +8,11 @@ use warp::{Filter, Rejection, Reply};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     morgan::Morgan::init(vec!["tracing".into()]);
 
-    let pool = ConnectionPool::new("0.0.0.0:8888".into(), 10).await?;
+    let metrix = Metrix::new(env!("CARGO_PKG_NAME").into(), "0.0.0.0:8889").await?;
+    let pool = ConnectionPool::new("0.0.0.0:8888".into(), metrix.get_sender(), 25).await?;
+
+    tokio::task::spawn(async { metrix.listen().await; });
+
     ApiServer::new(pool).serve().await;
 
     Ok(())
@@ -59,8 +64,27 @@ impl ApiServer {
         let history = last
             .or(last_bulk);
 
+        let metric = root
+            .clone()
+            .and(warp::path!("metrics" / ..));
+        let insert_metric = metric
+            .clone()
+            .and(warp::path!(Uuid))
+            .and(warp::post())
+            .and(warp::body::json())
+            .and_then(Self::insert_metric);
+        let lookup_metric = metric
+            .clone()
+            .and(warp::path::end())
+            .and(warp::post())
+            .and(warp::body::json())
+            .and_then(Self::lookup_id);
+        let metric = insert_metric
+            .or(lookup_metric);
+
         let api = infos
-            .or(history);
+            .or(history)
+            .or(metric);
 
         warp::serve(api)
             .run(([0, 0, 0, 0], 8889))
@@ -109,5 +133,43 @@ impl ApiServer {
         .unwrap();
 
         Ok(warp::reply::json(&data.0))
+    }
+
+    async fn insert_metric(
+        self: Self,
+        id: Uuid,
+        val: u128,
+    ) -> Result<impl Reply, Rejection> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        if let Err(e) = Protocol::request::<_, EmptyResponse>(
+            &mut conn,
+            InsertMetricsReq(
+                InsertMetricsEntry {
+                    id,
+                    value: val,
+                }
+            )
+        )
+        .await {
+            log::error!("Error writing into database. Error: {:?}", e);
+        }
+
+        Ok(warp::reply::json(&""))
+    }
+
+    async fn lookup_id(
+        self: Self,
+        name: String
+    ) -> Result<impl Reply, Rejection> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let id = Protocol::request::<_, LookupMetricIdRes>(
+            &mut conn,
+            LookupMetricIdReq(name),
+        )
+        .await
+        .map(|x| x.0)
+        .unwrap();
+
+        Ok(warp::reply::json(&id.id))
     }
 }

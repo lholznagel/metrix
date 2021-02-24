@@ -6,7 +6,7 @@ After=metrix_db.service
 Type=simple
 Environment=MORGAN_COLOR=false
 Environment=RUST_BACKTRACE=1
-ExecStartPre=/bin/sleep 5
+ExecStartPre=/bin/sleep 2
 ExecStart=/opt/metrix/metrix_server
 Restart=always
 

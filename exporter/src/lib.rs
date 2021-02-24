@@ -1,11 +1,7 @@
-mod error;
-
-use self::error::*;
-
-use cachem::{ConnectionPool, EmptyResponse, Protocol};
-use metrix_db::{InsertMetricsEntry, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
 use mpsc::{Receiver, Sender};
+use reqwest::Client;
 use std::collections::HashMap;
+use std::time::Instant;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -13,28 +9,31 @@ use uuid::Uuid;
 pub struct Metrix {
     /// Contains all ids that are resolved
     ids: HashMap<String, Uuid>,
-    /// Connection pool to the metrix database
-    metrix_pool: ConnectionPool,
     /// MSPC Receiver
     receiver: Receiver<(String, u128)>,
     /// MSPC Sender
     sender: Sender<(String, u128)>,
     /// Most times this will be the crate name
     root_metric: String,
+    /// Uri to metrix server
+    metrix_uri: &'static str,
+    /// Reqwest client
+    metrix_client: Client,
 }
 
 impl Metrix {
     /// Creates a new metrix instance
     ///
     /// Takes the uri to the metrix database
-    pub async fn new(root_metric: String, metrix_db_uri: &'static str) -> Result<Self, MetrixError> {
+    pub async fn new(root_metric: String, metrix_uri: &'static str) -> Result<Self, Box<dyn std::error::Error>> {
         let (tx, rx) = mpsc::channel(1_000);
 
         Ok(Self {
             sender: tx,
             receiver: rx,
             ids: HashMap::new(),
-            metrix_pool: ConnectionPool::new(metrix_db_uri, 50).await?,
+            metrix_uri,
+            metrix_client: Client::new(),
             root_metric,
         })
     }
@@ -52,34 +51,31 @@ impl Metrix {
                 self.fetch_id(&k).await.unwrap()
             };
 
-            // if the connection fails, we ignore the metric
-            if let Ok(mut conn) = self.metrix_pool.acquire().await {
-                if let Err(e) = Protocol::request::<_, EmptyResponse>(
-                    &mut conn,
-                    InsertMetricsReq(
-                        InsertMetricsEntry {
-                            id,
-                            value: v,
-                        }
-                    ),
-                )
+            if let Ok(r) = self.metrix_client
+                .post(&format!("http://{}/api/metrics/{}", self.metrix_uri, id))
+                .json(&v)
+                .send()
                 .await {
+
+                if let Err(e) = r.text().await {
                     log::error!("Error sending metric {:?} to server. Error: {:?}", id, e);
                 }
+            } else {
+                log::error!("Error sending metric {:?} to server.", id);
             }
         }
     }
 
-    async fn fetch_id(&mut self, name: &str) -> Result<Uuid, MetrixError> {
-        let mut conn = self.metrix_pool.acquire().await?;
-        let result = Protocol::request::<_, LookupMetricIdRes>(
-            &mut conn,
-            LookupMetricIdReq(name.into()),
-        )
-        .await
-        .map(|x| x.0)?;
-        self.ids.insert(result.key, result.id);
-        Ok(result.id)
+    async fn fetch_id(&mut self, name: &str) -> Result<Uuid, Box<dyn std::error::Error>> {
+        let id = self.metrix_client
+            .post(&format!("http://{}/api/metrics", self.metrix_uri))
+            .json(&name)
+            .send()
+            .await?
+            .json::<Uuid>()
+            .await?;
+        self.ids.insert(name.into(), id);
+        Ok(id)
     }
 }
 
@@ -104,16 +100,13 @@ impl MetrixSender {
 
         let _ = self.sender.send((m, value)).await;
     }
-}
 
-// metrix!(self, METRIC, VALUE);
-#[macro_export]
-macro_rules! metrix {
-    ($self:expr, $metric:expr, $value:expr) => {
-        $self.metrix
-            .as_ref()
-            .unwrap()
-            .send($metric, $value)
-            .await;
-    };
+    pub async fn send_time(&self, metric: &'static str, value: Instant) {
+        let value = value.elapsed().as_nanos();
+        let _ = self.send(metric, value).await;
+    }
+
+    pub async fn send_len(&self, metric: &'static str, value: usize) {
+        let _ = self.send(metric, value as u128).await;
+    }
 }
