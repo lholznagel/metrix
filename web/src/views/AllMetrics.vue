@@ -17,6 +17,9 @@
                 Timestamp
               </th>
               <th>
+                Id
+              </th>
+              <th>
               </th>
             </tr>
           </thead>
@@ -25,6 +28,7 @@
               <td>{{ getKey(v.id) }}</td>
               <td>{{ v.value }}</td>
               <td>{{ new Date(Math.floor(v.timestamp / 1000000)) }}</td>
+              <td>{{ v.id }}</td>
               <td>
                 <v-btn
                   icon

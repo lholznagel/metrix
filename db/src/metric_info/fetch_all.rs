@@ -1,11 +1,11 @@
 use crate::{Actions, MetricInfoCache, MetricInfoEntry};
 
 use async_trait::*;
-use cachem::{EmptyResponse, Fetch, Parse, request};
+use cachem::{EmptyMsg, Fetch, Parse, request};
 
 #[async_trait]
 impl Fetch<FetchAllMetricInfosReq> for MetricInfoCache {
-    type Error    = EmptyResponse;
+    type Error    = EmptyMsg;
     type Response = FetchAllMetricInfosRes;
 
     async fn fetch(&self, _: FetchAllMetricInfosReq) -> Result<Self::Response, Self::Error> {
@@ -22,7 +22,7 @@ impl Fetch<FetchAllMetricInfosReq> for MetricInfoCache {
 
 #[request(Actions::FetchAllInfos)]
 #[derive(Debug, Default, Parse)]
-pub struct FetchAllMetricInfosReq(pub EmptyResponse);
+pub struct FetchAllMetricInfosReq(pub EmptyMsg);
 
 #[derive(Debug, Parse)]
 pub struct FetchAllMetricInfosRes(pub Vec<MetricInfoEntry>);

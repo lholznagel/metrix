@@ -18,5 +18,9 @@ deploy-db: musl
 	sudo mkdir -p /var/metrix/db/storage
 	sudo systemctl restart metrix_db
 
+deploy:
+	make deploy-db
+	make deploy-server
+
 sync-virgo:
-	rsync --recursive --update --inplace --delete --quiet --exclude={'.git','target','web/node_modules'} . virgo:dev/metrix
+	rsync --recursive --inplace --delete --quiet --exclude={'.git','target','web/node_modules'} . virgo:dev/metrix

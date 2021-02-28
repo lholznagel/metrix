@@ -3,14 +3,14 @@ use super::{MetricHistoryCache, MetricHistoryEntry};
 use crate::Actions;
 
 use async_trait::*;
-use cachem::{EmptyResponse, Insert, Parse, Storage, request};
+use cachem::{EmptyMsg, Insert, Parse, request};
 use chrono::Utc;
 use uuid::Uuid;
 
 #[async_trait]
 impl Insert<InsertMetricsReq> for MetricHistoryCache {
-    type Error    = EmptyResponse;
-    type Response = EmptyResponse;
+    type Error    = EmptyMsg;
+    type Response = EmptyMsg;
 
     async fn insert(&self, input: InsertMetricsReq) -> Result<Self::Response, Self::Error> {
         let timestamp = Utc::now().timestamp_nanos() as u64;
@@ -23,17 +23,27 @@ impl Insert<InsertMetricsReq> for MetricHistoryCache {
             value: metric.value,
         };
 
-        // If the id already has entries append the new entry
-        // If the id is new create it and add the first entry
-        data_copy
-            .entry(metric.id)
-            .and_modify(|x| x.push(entry))
-            .or_insert(vec![entry]);
+        // Check if the last value is the same as the current one
+        if let Some(x) = data_copy.get(&metric.id) {
+            if x.last().unwrap().value != metric.value {
+                // If the id already has entries append the new entry
+                // If the id is new create it and add the first entry
+                data_copy
+                    .entry(metric.id)
+                    .and_modify(|x| x.push(entry))
+                    .or_insert(vec![entry]);
+            }
+        } else {
+            // If the id already has entries append the new entry
+            // If the id is new create it and add the first entry
+            data_copy
+                .entry(metric.id)
+                .and_modify(|x| x.push(entry))
+                .or_insert(vec![entry]);
+        }
 
         *self.0.write().await = data_copy;
-        self.save_to_file().await.unwrap();
-
-        Ok(EmptyResponse::default())
+        Ok(EmptyMsg::default())
     }
 }
 

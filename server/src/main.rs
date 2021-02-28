@@ -1,5 +1,5 @@
-use cachem::{ConnectionPool, EmptyResponse, Protocol};
-use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes, InsertMetricsEntry, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
+use cachem::{ConnectionPool, EmptyMsg, Protocol};
+use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricFilter, FetchMetricsHistoryReq, FetchMetricsHistoryRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes, InsertMetricsEntry, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
 use metrix_exporter::Metrix;
 use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
@@ -61,8 +61,14 @@ impl ApiServer {
             .and(warp::post())
             .and(warp::body::json())
             .and_then(Self::fetch_last_bulk);
+        let raw = history
+            .clone()
+            .and(warp::path!(Uuid / "raw"))
+            .and(warp::get())
+            .and_then(Self::fetch_raw);
         let history = last
-            .or(last_bulk);
+            .or(last_bulk)
+            .or(raw);
 
         let metric = root
             .clone()
@@ -89,6 +95,24 @@ impl ApiServer {
         warp::serve(api)
             .run(([0, 0, 0, 0], 8889))
             .await;
+    }
+
+    async fn fetch_raw(
+        self: Self,
+        id: Uuid,
+    ) -> Result<impl Reply, Rejection> {
+        let mut conn = self.pool.acquire().await.unwrap();
+        let data = Protocol::request::<_, FetchMetricsHistoryRes>(
+            &mut conn,
+            FetchMetricsHistoryReq(FetchMetricFilter {
+                id,
+                ts_start: 0,
+            })
+        )
+        .await
+        .unwrap();
+
+        Ok(warp::reply::json(&data.0))
     }
 
     async fn fetch_all_metric_infos(
@@ -141,7 +165,7 @@ impl ApiServer {
         val: u128,
     ) -> Result<impl Reply, Rejection> {
         let mut conn = self.pool.acquire().await.unwrap();
-        if let Err(e) = Protocol::request::<_, EmptyResponse>(
+        if let Err(e) = Protocol::request::<_, EmptyMsg>(
             &mut conn,
             InsertMetricsReq(
                 InsertMetricsEntry {

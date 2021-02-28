@@ -3,7 +3,7 @@ use super::{MetricInfoCache, MetricInfoEntry};
 use crate::Actions;
 
 use async_trait::*;
-use cachem::{EmptyResponse, Lookup, Parse, Storage, request};
+use cachem::{EmptyMsg, Lookup, Parse, Storage, request};
 use uuid::Uuid;
 
 /// Resolves the given name to a uuid
@@ -11,7 +11,7 @@ use uuid::Uuid;
 /// If the name is not in the cache it will be added and the uuid will be returned
 #[async_trait]
 impl Lookup<LookupMetricIdReq> for MetricInfoCache {
-    type Error    = EmptyResponse;
+    type Error    = EmptyMsg;
     type Response = LookupMetricIdRes;
 
     async fn lookup(&self, input: LookupMetricIdReq) -> Result<Self::Response, Self::Error> {

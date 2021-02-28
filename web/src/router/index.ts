@@ -7,12 +7,18 @@ Vue.use(VueRouter);
 const routes: RouteConfig[] = [
   {
     path: '/',
-    redirect: '/all',
+    name: 'Home',
+    component: () => import(/* webpackChunkName: "all_metrics" */ '../views/Home.vue')
   },
   {
     path: '/all',
     name: 'AllMetrics',
     component: () => import(/* webpackChunkName: "all_metrics" */ '../views/AllMetrics.vue')
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import(/* webpackChunkName: "dashboard" */ '../views/Dashboard.vue')
   },
 ];
 

@@ -3,12 +3,12 @@ use super::MetricHistoryCache;
 use crate::Actions;
 
 use async_trait::*;
-use cachem::{EmptyResponse, Fetch, Parse, request};
+use cachem::{EmptyMsg, Fetch, Parse, request};
 use uuid::Uuid;
 
 #[async_trait]
 impl Fetch<FetchMetricsLastBulkReq> for MetricHistoryCache {
-    type Error    = EmptyResponse;
+    type Error    = EmptyMsg;
     type Response = FetchMetricsLastBulkRes;
 
     async fn fetch(&self, input: FetchMetricsLastBulkReq) -> Result<Self::Response, Self::Error> {
