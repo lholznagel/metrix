@@ -5,10 +5,9 @@ use cachem::{EmptyMsg, Fetch, Parse, request};
 
 #[async_trait]
 impl Fetch<FetchAllMetricInfosReq> for MetricInfoCache {
-    type Error    = EmptyMsg;
     type Response = FetchAllMetricInfosRes;
 
-    async fn fetch(&self, _: FetchAllMetricInfosReq) -> Result<Self::Response, Self::Error> {
+    async fn fetch(&self, _: FetchAllMetricInfosReq) -> Self::Response {
         let entries = self.0
             .read()
             .await
@@ -16,7 +15,7 @@ impl Fetch<FetchAllMetricInfosReq> for MetricInfoCache {
             .into_iter()
             .map(|(_, x)| x)
             .collect::<Vec<_>>();
-        Ok(FetchAllMetricInfosRes(entries))
+        FetchAllMetricInfosRes(entries)
     }
 }
 

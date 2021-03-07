@@ -3,7 +3,7 @@ use super::{MetricInfoCache, MetricInfoEntry};
 use crate::Actions;
 
 use async_trait::*;
-use cachem::{EmptyMsg, Lookup, Parse, Storage, request};
+use cachem::{Lookup, Parse, Storage, request};
 use uuid::Uuid;
 
 /// Resolves the given name to a uuid
@@ -11,10 +11,9 @@ use uuid::Uuid;
 /// If the name is not in the cache it will be added and the uuid will be returned
 #[async_trait]
 impl Lookup<LookupMetricIdReq> for MetricInfoCache {
-    type Error    = EmptyMsg;
     type Response = LookupMetricIdRes;
 
-    async fn lookup(&self, input: LookupMetricIdReq) -> Result<Self::Response, Self::Error> {
+    async fn lookup(&self, input: LookupMetricIdReq) -> Self::Response {
         // Try to get the key from the map
         let id = self.0
             .read()
@@ -39,10 +38,10 @@ impl Lookup<LookupMetricIdReq> for MetricInfoCache {
         };
 
         self.save_to_file().await.unwrap();
-        Ok(LookupMetricIdRes(LookupMetricEntry {
+        LookupMetricIdRes {
             key: input.0,
             id,
-        }))
+        }
     }
 }
 
@@ -51,10 +50,7 @@ impl Lookup<LookupMetricIdReq> for MetricInfoCache {
 pub struct LookupMetricIdReq(pub String);
 
 #[derive(Debug, Parse)]
-pub struct LookupMetricIdRes(pub LookupMetricEntry);
-
-#[derive(Debug, Parse)]
-pub struct LookupMetricEntry {
+pub struct LookupMetricIdRes {
     pub key: String,
     pub id: Uuid,
 }

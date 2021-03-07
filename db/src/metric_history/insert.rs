@@ -9,12 +9,10 @@ use uuid::Uuid;
 
 #[async_trait]
 impl Insert<InsertMetricsReq> for MetricHistoryCache {
-    type Error    = EmptyMsg;
     type Response = EmptyMsg;
 
-    async fn insert(&self, input: InsertMetricsReq) -> Result<Self::Response, Self::Error> {
+    async fn insert(&self, metric: InsertMetricsReq) -> Self::Response {
         let timestamp = Utc::now().timestamp_nanos() as u64;
-        let metric = input.0;
         let mut data_copy = self.0.read().await.clone();
 
         // Create the new entry
@@ -43,16 +41,13 @@ impl Insert<InsertMetricsReq> for MetricHistoryCache {
         }
 
         *self.0.write().await = data_copy;
-        Ok(EmptyMsg::default())
+        EmptyMsg::default()
     }
 }
 
 #[request(Actions::InsertMetric)]
 #[derive(Debug, Parse)]
-pub struct InsertMetricsReq(pub InsertMetricsEntry);
-
-#[derive(Clone, Copy, Debug, Parse)]
-pub struct InsertMetricsEntry {
+pub struct InsertMetricsReq {
     /// Id of the entry
     pub id: Uuid,
     /// Value for that id
@@ -77,10 +72,9 @@ mod metric_history_insert_tests {
         let cache = MetricHistoryCache(RwLock::new(entries));
         assert!(cache.0.read().await.get(&uuid_0).unwrap().len() == 1);
 
-        let input_data = InsertMetricsEntry { id: uuid_0, value: 1 };
-        let input = InsertMetricsReq(input_data);
-        let res = cache.insert(input).await;
-        assert!(res.is_ok());
+        let input = InsertMetricsReq { id: uuid_0, value: 1 };
+        let _ = cache.insert(input).await;
+
         assert!(cache.0.read().await.get(&uuid_0).unwrap().len() == 2);
     }
 }

@@ -8,11 +8,9 @@ use uuid::Uuid;
 
 #[async_trait]
 impl Fetch<FetchMetricsHistoryReq> for MetricHistoryCache {
-    type Error    = EmptyMsg;
     type Response = FetchMetricsHistoryRes;
 
-    async fn fetch(&self, input: FetchMetricsHistoryReq) -> Result<Self::Response, Self::Error> {
-        let filter = input.0;
+    async fn fetch(&self, filter: FetchMetricsHistoryReq) -> Self::Response {
         let entries = self.0
             .read()
             .await;
@@ -24,22 +22,16 @@ impl Fetch<FetchMetricsHistoryReq> for MetricHistoryCache {
 
                 res.push(*x);
             }
-            return Ok(FetchMetricsHistoryRes(res));
+            return FetchMetricsHistoryRes::Ok(res);
         }
 
-        Err(EmptyMsg::default())
+        FetchMetricsHistoryRes::Err(EmptyMsg::default())
     }
 }
 
 #[request(Actions::FetchHistory)]
 #[derive(Debug, Parse)]
-pub struct FetchMetricsHistoryReq(pub FetchMetricFilter);
-
-#[derive(Debug, Parse)]
-pub struct FetchMetricsHistoryRes(pub Vec<MetricHistoryEntry>);
-
-#[derive(Clone, Copy, Debug, Parse)]
-pub struct FetchMetricFilter {
+pub struct FetchMetricsHistoryReq {
     /// Id of the requested metric
     pub id: Uuid,
     /// Start timestamp, max 30 days in the past
@@ -47,6 +39,11 @@ pub struct FetchMetricFilter {
     pub ts_start: u64,
 }
 
+#[derive(Debug, Parse)]
+pub enum FetchMetricsHistoryRes {
+    Ok(Vec<MetricHistoryEntry>),
+    Err(EmptyMsg)
+}
 #[cfg(test)]
 mod metric_history_fetch_tests {
     use super::*;
@@ -67,18 +64,18 @@ mod metric_history_fetch_tests {
         ]);
         let cache = MetricHistoryCache(RwLock::new(entries));
 
-        let filter = FetchMetricFilter {
+        let input = FetchMetricsHistoryReq {
             id: uuid_0,
             ts_start: 0
         };
-        let input = FetchMetricsHistoryReq(filter);
 
-        let res = cache.fetch(input).await;
-        assert!(res.is_ok());
-
-        let res = res.unwrap();
-        assert!(res.0.len() > 0);
-        assert!(res.0.len() == 4);
+        match cache.fetch(input).await {
+            FetchMetricsHistoryRes::Ok(x) => {
+                assert!(x.len() > 0);
+                assert!(x.len() == 4);
+            },
+            _ => assert!(false)
+        }
     }
 
     /// Has a set of values only 2 of 4 should be returned
@@ -94,18 +91,18 @@ mod metric_history_fetch_tests {
         ]);
         let cache = MetricHistoryCache(RwLock::new(entries));
 
-        let filter = FetchMetricFilter {
+        let input = FetchMetricsHistoryReq {
             id: uuid_0,
             ts_start: 3
         };
-        let input = FetchMetricsHistoryReq(filter);
 
-        let res = cache.fetch(input).await;
-        assert!(res.is_ok());
-
-        let res = res.unwrap();
-        assert!(res.0.len() > 0);
-        assert!(res.0.len() == 2);
+        match cache.fetch(input).await {
+            FetchMetricsHistoryRes::Ok(x) => {
+                assert!(x.len() > 0);
+                assert!(x.len() == 2);
+            },
+            _ => assert!(false)
+        }
     }
 
     // This is not the id you are searching for
@@ -114,13 +111,14 @@ mod metric_history_fetch_tests {
         let uuid_0 = Uuid::new_v4();
         let cache = MetricHistoryCache(RwLock::new(HashMap::new()));
 
-        let filter = FetchMetricFilter {
+        let input = FetchMetricsHistoryReq {
             id: uuid_0,
             ts_start: 0u64,
         };
-        let input = FetchMetricsHistoryReq(filter);
 
-        let res = cache.fetch(input).await;
-        assert!(res.is_err());
+        match cache.fetch(input).await {
+            FetchMetricsHistoryRes::Err(_) => assert!(true),
+            _ => assert!(false)
+        }
     }
 }

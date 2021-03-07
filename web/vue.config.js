@@ -1,5 +1,5 @@
 module.exports = {
-  "transpileDependencies": [
+  transpileDependencies: [
     "vuetify"
   ],
   devServer: {
@@ -9,5 +9,20 @@ module.exports = {
         target: 'http://192.168.178.199:8889'
       }
     }
+  },
+  chainWebpack: config => {
+    config.module
+      .rule("vue")
+      .use("vue-svg-inline-loader")
+        .loader("vue-svg-inline-loader")
+        .options({
+          svgo: {
+            plugins: [
+              {
+                cleanupIDs: false,
+              }
+            ]
+          }
+        });
   }
 }

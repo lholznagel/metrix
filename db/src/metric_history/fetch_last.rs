@@ -8,19 +8,18 @@ use uuid::Uuid;
 
 #[async_trait]
 impl Fetch<FetchMetricsLastReq> for MetricHistoryCache {
-    type Error    = EmptyMsg;
     type Response = FetchMetricsLastRes;
 
-    async fn fetch(&self, input: FetchMetricsLastReq) -> Result<Self::Response, Self::Error> {
+    async fn fetch(&self, input: FetchMetricsLastReq) -> Self::Response {
         let entries = self.0
             .read()
             .await;
         if let Some(x) = entries.get(&input.0) {
             // If the item exist, there is at least one element in the vec
-            return Ok(FetchMetricsLastRes(x.clone().pop().unwrap()))
+            FetchMetricsLastRes::Ok(x.clone().pop().unwrap())
+        } else {
+            FetchMetricsLastRes::Err(EmptyMsg::default())
         }
-
-        Err(EmptyMsg::default())
     }
 }
 
@@ -29,7 +28,10 @@ impl Fetch<FetchMetricsLastReq> for MetricHistoryCache {
 pub struct FetchMetricsLastReq(pub Uuid);
 
 #[derive(Debug, Parse)]
-pub struct FetchMetricsLastRes(pub MetricHistoryEntry);
+pub enum FetchMetricsLastRes {
+    Ok(MetricHistoryEntry),
+    Err(EmptyMsg),
+}
 
 #[cfg(test)]
 mod metric_history_fetch_tests {
@@ -53,12 +55,13 @@ mod metric_history_fetch_tests {
 
         let input = FetchMetricsLastReq(uuid_0);
 
-        let res = cache.fetch(input).await;
-        assert!(res.is_ok());
-
-        let res = res.unwrap();
-        assert_eq!(res.0.timestamp, 5u64);
-        assert_eq!(res.0.value, 6u128);
+        match cache.fetch(input).await {
+            FetchMetricsLastRes::Ok(x) => {
+                assert_eq!(x.timestamp, 5u64);
+                assert_eq!(x.value, 6u128);
+            },
+            _ => assert!(false)
+        }
     }
 
     // This is not the id you are searching for
@@ -69,7 +72,9 @@ mod metric_history_fetch_tests {
 
         let input = FetchMetricsLastReq(uuid_0);
 
-        let res = cache.fetch(input).await;
-        assert!(res.is_err());
+        match cache.fetch(input).await {
+            FetchMetricsLastRes::Err(_) => assert!(true),
+            _ => assert!(false)
+        };
     }
 }

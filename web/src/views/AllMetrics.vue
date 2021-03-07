@@ -25,7 +25,7 @@
           </thead>
           <tbody>
             <tr v-for="v in lastValues" :key="v.id">
-              <td>{{ getKey(v.id) }}</td>
+              <td>{{ v.key }}</td>
               <td>{{ v.value }}</td>
               <td>{{ new Date(Math.floor(v.timestamp / 1000000)) }}</td>
               <td>{{ v.id }}</td>
@@ -54,29 +54,31 @@ import { Component, Vue } from 'vue-property-decorator';
 export default class AllMetrics extends Vue {
   public lastValues: IMetrixHistory[] = [];
   public metrixInfos: IMetrixInfo[] = [];
-  public options = {};
 
   public async created() {
     this.metrixInfos = (await axios.get<IMetrixInfo[]>('/api/infos')).data;
     this.load(this.metrixInfos.map(x => x.id));
-
-    this.options = {
-      xAxis: {
-        type: 'category',
-        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      },
-      yAxis: {},
-      series: [{
-        data: [150, 230, 224, 218, 135, 147, 260],
-        type: 'line'
-      }]
-    };
   }
 
   public async load(ids: string[]) {
     (await axios.post<IMetrixHistory[]>(`/api/history/bulk`, ids))
       .data
+      .map(x => {
+        return {
+          key: this.getKey(x.id),
+          ...x
+        }
+      })
       .map(x => this.lastValues.push(x));
+    this.lastValues = this.lastValues.sort((a, b) => {
+      if (a.key < b.key) {
+        return -1;
+      }
+      if (a.key > b.key) {
+        return 1;
+      }
+      return 0;
+    })
   }
 
   public getKey(id: string): string {
@@ -91,6 +93,7 @@ interface IMetrixInfo {
 
 interface IMetrixHistory {
   id?: string;
+  key: string;
   timestamp: number;
   value: number;
 }

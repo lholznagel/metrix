@@ -3,15 +3,14 @@ use super::MetricHistoryCache;
 use crate::Actions;
 
 use async_trait::*;
-use cachem::{EmptyMsg, Fetch, Parse, request};
+use cachem::{Fetch, Parse, request};
 use uuid::Uuid;
 
 #[async_trait]
 impl Fetch<FetchMetricsLastBulkReq> for MetricHistoryCache {
-    type Error    = EmptyMsg;
     type Response = FetchMetricsLastBulkRes;
 
-    async fn fetch(&self, input: FetchMetricsLastBulkReq) -> Result<Self::Response, Self::Error> {
+    async fn fetch(&self, input: FetchMetricsLastBulkReq) -> Self::Response {
         let mut result = Vec::with_capacity(input.0.len());
 
         let entries = self.0
@@ -29,7 +28,7 @@ impl Fetch<FetchMetricsLastBulkReq> for MetricHistoryCache {
             }
         }
 
-        Ok(FetchMetricsLastBulkRes(result))
+        FetchMetricsLastBulkRes(result)
     }
 }
 

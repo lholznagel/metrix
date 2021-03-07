@@ -1,5 +1,5 @@
 use cachem::{ConnectionPool, EmptyMsg, Protocol};
-use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricFilter, FetchMetricsHistoryReq, FetchMetricsHistoryRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes, InsertMetricsEntry, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
+use metrix_db::{FetchAllMetricInfosReq, FetchAllMetricInfosRes, FetchMetricsHistoryReq, FetchMetricsHistoryRes, FetchMetricsLastBulkReq, FetchMetricsLastBulkRes, FetchMetricsLastReq, FetchMetricsLastRes, InsertMetricsReq, LookupMetricIdReq, LookupMetricIdRes};
 use metrix_exporter::Metrix;
 use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
@@ -104,15 +104,20 @@ impl ApiServer {
         let mut conn = self.pool.acquire().await.unwrap();
         let data = Protocol::request::<_, FetchMetricsHistoryRes>(
             &mut conn,
-            FetchMetricsHistoryReq(FetchMetricFilter {
+            FetchMetricsHistoryReq {
                 id,
                 ts_start: 0,
-            })
+            }
         )
         .await
         .unwrap();
 
-        Ok(warp::reply::json(&data.0))
+        Ok(
+            match data {
+                FetchMetricsHistoryRes::Ok(x) => warp::reply::json(&x),
+                _ => warp::reply::json(&"")
+            }
+        )
     }
 
     async fn fetch_all_metric_infos(
@@ -141,7 +146,12 @@ impl ApiServer {
         .await
         .unwrap();
 
-        Ok(warp::reply::json(&data.0))
+        Ok(
+            match data {
+                FetchMetricsLastRes::Ok(x) => warp::reply::json(&x),
+                _ => warp::reply::json(&"")
+            }
+        )
     }
 
     async fn fetch_last_bulk(
@@ -167,12 +177,10 @@ impl ApiServer {
         let mut conn = self.pool.acquire().await.unwrap();
         if let Err(e) = Protocol::request::<_, EmptyMsg>(
             &mut conn,
-            InsertMetricsReq(
-                InsertMetricsEntry {
-                    id,
-                    value: val,
-                }
-            )
+        InsertMetricsReq{
+                id,
+                value: val,
+            }
         )
         .await {
             log::error!("Error writing into database. Error: {:?}", e);
@@ -186,14 +194,13 @@ impl ApiServer {
         name: String
     ) -> Result<impl Reply, Rejection> {
         let mut conn = self.pool.acquire().await.unwrap();
-        let id = Protocol::request::<_, LookupMetricIdRes>(
+        Protocol::request::<_, LookupMetricIdRes>(
             &mut conn,
             LookupMetricIdReq(name),
         )
         .await
-        .map(|x| x.0)
-        .unwrap();
-
-        Ok(warp::reply::json(&id.id))
+        .map(|x| x.id)
+        .map(|x| warp::reply::json(&x))
+        .map_err(|_| warp::reject())
     }
 }
