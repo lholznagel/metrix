@@ -1,8 +1,8 @@
-use mpsc::{Receiver, Sender};
 use reqwest::Client;
 use std::collections::HashMap;
 use std::time::Instant;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
 /// Manages mspc and sending metrix to the database
@@ -26,7 +26,7 @@ impl Metrix {
     ///
     /// Takes the uri to the metrix database
     pub async fn new(root_metric: String, metrix_uri: &'static str) -> Result<Self, Box<dyn std::error::Error>> {
-        let (tx, rx) = mpsc::channel(1_000);
+        let (tx, rx) = mpsc::channel(1_000_000);
 
         Ok(Self {
             sender: tx,
@@ -93,6 +93,7 @@ impl MetrixSender {
         }
     }
 
+    #[inline]
     pub async fn send(&self, metric: &'static str, value: u128) {
         let mut m = self.root.clone();
         m.push_str("::");
@@ -101,11 +102,13 @@ impl MetrixSender {
         let _ = self.sender.send((m, value)).await;
     }
 
+    #[inline]
     pub async fn send_time(&self, metric: &'static str, value: Instant) {
         let value = value.elapsed().as_nanos();
         let _ = self.send(metric, value).await;
     }
 
+    #[inline]
     pub async fn send_len(&self, metric: &'static str, value: usize) {
         let _ = self.send(metric, value as u128).await;
     }

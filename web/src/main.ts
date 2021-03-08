@@ -15,6 +15,8 @@ Vue.component('v-grid-layout', VueGridLayout.GridLayout);
 Vue.component('v-grid-item', VueGridLayout.GridItem);
 Vue.component('v-chart', ECharts);
 
+Vue.component('svg-market-insert', () => import(/* webpackChunkName: "svg_market_insert" */ './components/svg/MarketInsert.vue'));
+
 new Vue({
   router,
   vuetify,

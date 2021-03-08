@@ -27,6 +27,18 @@
             </v-row>
           </v-card-title>
 
+          <v-card-text>
+            <svg-market-insert></svg-market-insert>
+          </v-card-text>
+        </v-card>
+
+        <!--<v-card style="heigth: 100%">
+          <v-card-title>
+            <v-row align="center" justify="center">
+              {{ item.title }}
+            </v-row>
+          </v-card-title>
+
           <v-skeleton-loader
             class="mx-auto"
             type="card"
@@ -52,7 +64,7 @@
               <h5>{{ values[item.mid].timestamp.toLocaleString("de-DE") }}</h5>
             </v-row>
           </v-card-text>
-        </v-card>
+        </v-card>-->
 
       </v-grid-item>
     </v-grid-layout>
@@ -66,7 +78,10 @@ import { Component, Vue } from 'vue-property-decorator';
 @Component
 export default class Home extends Vue {
   public values: { [key: string]: IMetricValue } = {};
-  public layout: IDashboardItem[] = [
+  public layout = [
+    { x: 0, y: 0, w: 5, h: 12, i: '0', title: 'Market insert' }
+  ]
+  /*public layout: IDashboardItem[] = [
     { x: 0, y: 1, w: 3, h: 5, i: '0', wType: 'COUNTER', mid: 'c3ba9030-8b50-4f31-bc01-ecb141df9349', title: 'Available connections' },
     { x: 3, y: 1, w: 3, h: 5, i: '1', wType: 'COUNTER', mid: '0611e2eb-ae9f-4905-bd8a-f9b51ec70034', title: 'Broken connections' },
     { x: 0, y: 6, w: 3, h: 5, i: '2', wType: 'DURATION', mid: 'b2fbdffa-acca-4220-9949-577cc55e9fc0', title: 'Market fetch (eve)' },
@@ -76,15 +91,15 @@ export default class Home extends Vue {
     { x: 3, y: 11, w: 3, h: 5, i: '6', wType: 'DURATION', mid: 'a8b2a39c-c3a1-4bcb-b529-28ff7e9bfe8b', title: 'Send market infos' },
     { x: 6, y: 11, w: 3, h: 5, i: '7', wType: 'DURATION', mid: 'a5d37bf2-7a3c-4d68-b2cf-573b44d23900', title: 'Prep market data' },
     { x: 9, y: 11, w: 3, h: 5, i: '8', wType: 'DURATION', mid: '0efb2027-263e-444d-b241-f5058f827ba0', title: 'Send market data' }
-  ];
+  ];*/
 
-  public async created() {
+  /*public async created() {
     for (const x of this.layout) {
         const result = (await axios.get(`/api/history/${x.mid}`)).data;
         result.timestamp = new Date(Math.floor(result.timestamp / 1000000));
         Vue.set(this.values, x.mid, result);
     }
-  }
+  }*/
 }
 
 export interface IDashboardItem {
