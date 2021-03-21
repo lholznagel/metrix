@@ -93,6 +93,15 @@ impl MetrixSender {
         }
     }
 
+    /// Creates a new MetrixSender instance for testing
+    pub fn new_test() -> Self {
+        let (tx, _) = mpsc::channel(1_000_000);
+        Self {
+            root: String::from("test"),
+            sender: tx,
+        }
+    }
+
     #[inline]
     pub async fn send(&self, metric: &'static str, value: u128) {
         let mut m = self.root.clone();
